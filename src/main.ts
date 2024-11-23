@@ -1,9 +1,10 @@
 import kaplay from "kaplay";
+import { levelData } from "./data";
+
+const GAME_SCALE = 4;
 
 const k = kaplay({
     canvas: document.getElementById("canvas") as HTMLCanvasElement,
-    width: 800,
-    height: 600,
     debug: true
 });
 
@@ -14,55 +15,45 @@ k.setGravity(2000);
 
 k.loadSprite("bean", "sprites/bean.png");
 k.loadSprite("cat", "sprites/cat.png");
+k.loadSprite("house", "sprites/house.png");
 
-// floor
-k.add([
-    k.rect(k.width(), 100),
-    k.pos(0, k.height() - 40),
-    k.color(k.WHITE),
-    k.body({
-        isStatic: true
-    }),
-    k.area()
+const house = k.add([
+    k.sprite("house"),
+    k.scale(GAME_SCALE)
 ]);
 
-k.add([
-    k.rect(200, 40),
-    k.pos(k.width() - 200, k.height() - 200),
-    k.color(k.WHITE),
-    k.body({
-        isStatic: true
-    }),
-    k.area()
-])
+for (let i = 0; i < levelData.solids.length; i++) {
+    const { x, y, width, height } = levelData.solids[i];
+    k.add([
+        k.rect(width * GAME_SCALE, height * GAME_SCALE),
+        k.pos(x * GAME_SCALE, y * GAME_SCALE),
+        k.color(k.WHITE),
+        k.opacity(0),
+        k.body({
+            isStatic: true
+        }),
+        k.area()
+    ]);
+}
 
-// platforms
-k.add([
-    "one-way-collision",
-    k.pos(40, k.height() - 40),
-    k.rect(200, 40),
-    k.color(k.RED),
-    k.anchor("botleft"),
-    k.body({
-        isStatic: true
-    }),
-    k.area()
-]);
-k.add([
-    "one-way-collision",
-    k.pos(200, k.height() - 40),
-    k.rect(200, 100),
-    k.color(k.RED),
-    k.anchor("botleft"),
-    k.body({
-        isStatic: true
-    }),
-    k.area()
-]);
+for (let i = 0; i < levelData.platforms.length; i++) {
+    const { x, y, width, height } = levelData.platforms[i];
+    k.add([
+        "one-way-collision",
+        k.rect(width * GAME_SCALE, height * GAME_SCALE),
+        k.pos(x * GAME_SCALE, y * GAME_SCALE),
+        k.color(k.GREEN),
+        k.opacity(0),
+        k.body({
+            isStatic: true
+        }),
+        k.area()
+    ]);
+}
 
 const player = k.add([
     k.pos(k.center()),
-    k.rect(16 * 4, 12 * 4),
+    k.rect(16 * GAME_SCALE, 12 * GAME_SCALE),
     k.opacity(0),
     k.body(),
     k.area(),
@@ -72,7 +63,7 @@ const player = k.add([
 
 const playerSprite = player.add([
     k.sprite("cat"),
-    k.pos(0, 11 * 4),
+    k.pos(0, 11 * GAME_SCALE),
     k.scale(4),
     k.anchor("bot"),
 ])
@@ -95,7 +86,8 @@ player.onBeforePhysicsResolve((col) => {
     const OWC_THRESHOLD = 10;
 
     const playerY = player.pos.y;
-    const platformY = col.target.pos.y - col.target.height + OWC_THRESHOLD; // botleft anchored
+    const platformY = col.target.pos.y + OWC_THRESHOLD; // topleft anchored
+    // const platformY = col.target.pos.y - col.target.height + OWC_THRESHOLD; // botleft anchored
     
     if (playerY > platformY) {
         col.preventResolution();
@@ -117,5 +109,7 @@ player.onUpdate(() => {
     playerMovementX = k.lerp(playerMovementX, targetMovementX, k.dt() * 4);
     player.pos.x += playerMovementX;
 
-    player.collisionIgnore = k.isKeyDown("down") ? ['one-way-collision'] : []
+    player.collisionIgnore = k.isKeyDown("down") ? ['one-way-collision'] : [];
+
+    k.camPos(k.camPos().lerp(player.pos, k.dt() * 4));
 });
